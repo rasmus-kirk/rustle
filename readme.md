@@ -15,12 +15,12 @@ the manufacturer about the issue and they responded:
 > standby mode after a maximum of 20 minutes of inactivity (no audio signal),
 > and most manufacturers, including us, configure this to occur after 15
 > minutes to ensure compliance._
-
+> 
 > _Unfortunately, this feature cannot be disabled, as it is a legal requirement
 > aimed at reducing energy consumption across the EU._
 
 This is of course despite the fact that HDMI-CEC already turns the speaker
-off automatically.
+off automatically, when the TV is turned off.
 
 > _"I'm not mad at you, I'm mad at the system" - Dennis_
 
@@ -42,5 +42,5 @@ TODO
 
 View help for all options:
 ```bash
-cargo run -- --help
+  cargo run -- --help
 ```
