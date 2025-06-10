@@ -1,7 +1,8 @@
 use clap::Parser;
 use rodio::{OutputStream, Sink, Source};
 use std::f32::consts::PI;
-use std::time::Duration;
+use std::thread::sleep;
+use std::time::{Duration, SystemTime};
 
 #[derive(Parser, Debug)]
 #[command(author="Rasmus Kirk", version, about = "Rustle - Keep your digital speakers from sleeping, using low sound signals", long_about = None)]
@@ -88,7 +89,7 @@ impl Iterator for FluctuateSource {
             self.samples_since_last_pulse = 0;
             self.samples_in_current_pulse = 0;
         }
-
+        
         if self.samples_in_current_pulse < self.pulse_length {
             // Generate sine wave sample for the current pulse
             self.samples_in_current_pulse += 1;
@@ -123,7 +124,16 @@ fn main() {
     sink.append(source);
 
     // Keep the program running until interrupted (e.g., Ctrl+C)
-    sink.sleep_until_end();
+    let start = SystemTime::now();
+    let mut cur = 0;
+    loop {
+        sleep(Duration::new(1, 0));
+        let now = start.elapsed().unwrap().as_secs();
+        if cur != now {
+            println!("{:02}:{:02}", now / 60, now % 60);
+            cur = now;
+        }
+    }
 }
 
 #[cfg(test)]
