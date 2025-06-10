@@ -38,7 +38,13 @@ struct FluctuateSource {
 }
 
 impl FluctuateSource {
-    fn new(pulse_rate: f32, signal_frequency: f32, amplitude: f32, sample_rate: u32, pulse_duration: f32) -> Self {
+    fn new(
+        pulse_rate: f32,
+        signal_frequency: f32,
+        amplitude: f32,
+        sample_rate: u32,
+        pulse_duration: f32,
+    ) -> Self {
         let pulse_interval = (sample_rate as f32 / pulse_rate) as u32;
         let pulse_length = (sample_rate as f32 * pulse_duration) as u32;
         FluctuateSource {
