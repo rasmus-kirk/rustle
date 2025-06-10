@@ -1,0 +1,8 @@
+[package]
+name = "ferric-flux"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cpal = "0.16.0"
+rodio = "0.20.1"

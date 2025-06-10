@@ -41,12 +41,14 @@
       };
 
       devShells = forAllSystems ({ pkgs } : {
-        default = pkgs.mkShell {
-          buildInputs = [
+        default = let
+          alsapkgs = with pkgs; [ alsa-lib.dev alsa-lib alsa-plugins ];
+        in pkgs.mkShell {
+          buildInputs = with pkgs; [
             # rustfmt must be kept above rustToolchain in this list!
-            pkgs.rust-bin.nightly."${rustFmtVersion}".rustfmt
-            pkgs.rustToolchain
-            (pkgs.writeShellScriptBin "check-all" ''
+            rust-bin.nightly."${rustFmtVersion}".rustfmt
+            rustToolchain
+            (writeShellScriptBin "check-all" ''
               cd ${self}
               cargo fmt --all -- --check &&
               echo "-------------------- Format ✅ --------------------" &&
@@ -55,16 +57,18 @@
               check-test &&
               echo "-------------------- Test ✅ --------------------"
             '')
-            (pkgs.writeShellScriptBin "check-fmt" ''
+            (writeShellScriptBin "check-fmt" ''
               cargo fmt -- --check
             '')
-            (pkgs.writeShellScriptBin "check-lint" ''
+            (writeShellScriptBin "check-lint" ''
               cargo clippy --all-targets --all-features -- -D warnings
             '')
-            (pkgs.writeShellScriptBin "check-test" ''
+            (writeShellScriptBin "check-test" ''
               cargo test --all-features
             '')
-          ];
+          ] ++ alsapkgs;
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath alsapkgs;
+          ALSA_PLUGIN_DIR = "${pkgs.alsa-plugins}/lib/alsa-lib";
         };
       });
 
