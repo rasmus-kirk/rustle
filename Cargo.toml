@@ -1,7 +1,11 @@
 [package]
 name = "rustle"
+description = "Keep your digital speakers from sleeping, using low sound signals"
+homepage = "https://github.com/rasmus-kirk/rustle"
+repository = "https://github.com/rasmus-kirk/rustle"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
 
 [dependencies]
 rodio = "0.20.1"

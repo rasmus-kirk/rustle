@@ -4,7 +4,7 @@ use std::f32::consts::PI;
 use std::time::Duration;
 
 #[derive(Parser, Debug)]
-#[command(author="Rasmus Kirk", version, about = "Rustle - Keep your digital speakers from sleeping, with low sound signals", long_about = None)]
+#[command(author="Rasmus Kirk", version, about = "Rustle - Keep your digital speakers from sleeping, using low sound signals", long_about = None)]
 struct Args {
     /// Pulse rate in Hz (e.g., 2.0 for a pulse every 0.5 seconds)
     #[arg(short = 'r', long, default_value_t = 1.0)]

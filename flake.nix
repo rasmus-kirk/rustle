@@ -45,6 +45,7 @@
           alsapkgs = with pkgs; [ alsa-lib.dev alsa-lib alsa-plugins ];
         in pkgs.mkShell {
           buildInputs = with pkgs; [
+            pkg-config.
             # rustfmt must be kept above rustToolchain in this list!
             rust-bin.nightly."${rustFmtVersion}".rustfmt
             rustToolchain
@@ -88,6 +89,8 @@
             cargoLock = {
               lockFile = ./Cargo.lock;
             };
+            nativeBuildInputs = with pkgs; [ pkgconf ]; # Added for pkg-config
+            buildInputs = with pkgs; [ alsa-lib ];
           };
       });
     };
