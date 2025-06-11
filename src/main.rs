@@ -1,5 +1,7 @@
 use clap::Parser;
-use rodio::{OutputStream, Sink, Source};
+use rodio::cpal::traits::HostTrait;
+use rodio::source::SineWave;
+use rodio::{cpal, DeviceTrait, OutputStream, Sink, Source};
 use std::f32::consts::PI;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
@@ -111,17 +113,19 @@ fn main() {
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     let sink = Sink::try_new(&stream_handle).unwrap();
 
-    // Create a FluctuateSource with parsed arguments
-    let source = FluctuateSource::new(
-        args.pulse_rate,
-        args.signal_frequency,
-        args.amplitude,
-        args.sample_rate,
-        args.pulse_duration,
-    );
-
-    // Append the source to the sink
-    sink.append(source);
+    if args.pulse_rate == 0.0 || args.pulse_duration == 0.0 {
+        let source = SineWave::new(args.signal_frequency).amplify(args.amplitude);
+        sink.append(source);
+    } else {
+        let source = FluctuateSource::new(
+            args.pulse_rate,
+            args.signal_frequency,
+            args.amplitude,
+            args.sample_rate,
+            args.pulse_duration,
+        );
+        sink.append(source);
+    }
 
     // Keep the program running until interrupted (e.g., Ctrl+C)
     let start = SystemTime::now();
