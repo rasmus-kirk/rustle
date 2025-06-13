@@ -6,6 +6,7 @@ use rodio::source::SineWave;
 use rodio::{OutputStream, Sink, Source};
 use std::fs::DirEntry;
 use std::path::Path;
+use std::process::Command;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 use std::{fs, io};
@@ -30,7 +31,7 @@ struct Args {
 
     /// Minutes of undetected sound until the tone plays
     #[arg(short = 's', long, default_value_t = 10)]
-    mins_of_silence: u64,
+    minutes_of_silence: u64,
 }
 
 macro_rules! handle_err_cont {
@@ -45,8 +46,17 @@ macro_rules! handle_err_cont {
     };
 }
 
+fn is_playing_pipewire() -> anyhow::Result<bool> {
+    let x = Command::new("sh")
+        .arg("-c")
+        .arg("pw-dump | grep '\"state\": \"running\"' | wc -l")
+        .output()?
+        .stdout;
+    Ok(str::from_utf8(&x)?.trim() != "0")
+}
+
 // This function is horrible no matter what I do lol
-fn is_sound_playing() -> io::Result<bool> {
+fn is_playing_alsa() -> io::Result<bool> {
     let base_path = Path::new("/proc/asound");
 
     let handle_err = |e| {
@@ -135,26 +145,31 @@ fn main() {
     env_logger::init();
 
     let mut silence_start = SystemTime::now();
+    let program_start = SystemTime::now();
     loop {
         sleep(Duration::new(1, 0));
 
-        let is_playing = handle_err_cont!(is_sound_playing());
+        let is_playing = handle_err_cont!(is_playing_pipewire());
         let secs_of_silence = handle_err_cont!(silence_start.elapsed()).as_secs();
         let mins_of_silence = secs_of_silence / 60;
 
-        if mins_of_silence >= args.mins_of_silence {
+        if mins_of_silence >= args.minutes_of_silence {
             handle_err_cont!(play_sound(&args));
             silence_start = SystemTime::now();
         } else if is_playing {
             silence_start = SystemTime::now();
         }
 
-        if secs_of_silence % DEBUG_INTERVAL == 0 {
-            debug!(
-                "Period of silence: {:02}:{:02}",
-                mins_of_silence,
-                secs_of_silence % 60
-            );
+        if handle_err_cont!(program_start.elapsed()).as_secs() % DEBUG_INTERVAL == 0 {
+            if is_playing {
+                debug!("Sound is currently playing")
+            } else {
+                debug!(
+                    "Period of silence: {:02}:{:02}",
+                    mins_of_silence,
+                    secs_of_silence % 60
+                )
+            }
         }
     }
 }

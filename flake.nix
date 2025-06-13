@@ -41,7 +41,21 @@
 
       devShells = forAllSystems ({ pkgs } : {
         default = let
-          alsapkgs = with pkgs; [ alsa-lib.dev alsa-lib alsa-plugins ];
+          alsapkgs = with pkgs; [
+            alsa-lib.dev
+            alsa-lib
+            alsa-plugins
+            pipewire
+            pipewire.dev
+            pipewire.jack
+          ];
+          combinedAlsaPlugins = pkgs.symlinkJoin {
+            name = "combined-alsa-plugins";
+            paths = [
+              "${pkgs.pipewire}/lib/alsa-lib"
+              "${pkgs.alsa-plugins}/lib/alsa-lib"
+            ];
+          };
         in pkgs.mkShell {
           buildInputs = with pkgs; [
             pkg-config
@@ -69,12 +83,12 @@
           ] ++ alsapkgs;
           RUST_LOG = "debug";
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath alsapkgs;
-          ALSA_PLUGIN_DIR = "${pkgs.alsa-plugins}/lib/alsa-lib";
+          ALSA_PLUGIN_DIR = combinedAlsaPlugins;
         };
       });
 
-      packages = forAllSystems ({ pkgs }: {
-        default =
+      packages = forAllSystems ({ pkgs }: rec {
+        rustle =
           let
             manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
             rustPlatform = pkgs.makeRustPlatform {
@@ -83,15 +97,35 @@
             };
           in
           rustPlatform.buildRustPackage {
+            meta.mainProgram = "rustle";
             name = manifest.name;
             version = manifest.version;
-            src = ./.;
+            src = self;
             cargoLock = {
               lockFile = ./Cargo.lock;
             };
-            nativeBuildInputs = with pkgs; [ pkgconf ]; # Added for pkg-config
+            nativeBuildInputs = with pkgs; [ pkgconf ];
             buildInputs = with pkgs; [ alsa-lib ];
           };
+        rustleWrapped = let combinedAlsaPlugins = pkgs.symlinkJoin {
+          name = "combined-alsa-plugins";
+          paths = [
+            "${pkgs.pipewire}/lib/alsa-lib"
+            "${pkgs.alsa-plugins}/lib/alsa-lib"
+          ];
+        };
+        in pkgs.writeShellApplication {
+          name = "rustle";
+
+          runtimeInputs = [ rustle ];
+
+          text = ''
+            export ALSA_PLUGIN_DIR=${combinedAlsaPlugins}
+            rustle "$@"
+          '';
+        };
+        default = rustleWrapped;
       });
     };
+
 }
