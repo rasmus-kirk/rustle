@@ -162,7 +162,5 @@ fn main() {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_dummy() {
-        assert!(true)
-    }
+    fn test_dummy() {}
 }
