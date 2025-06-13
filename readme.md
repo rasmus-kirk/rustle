@@ -19,10 +19,10 @@ the manufacturer about the issue and they responded:
 > _Unfortunately, this feature cannot be disabled, as it is a legal requirement
 > aimed at reducing energy consumption across the EU._
 
-This is of course despite the fact that HDMI-CEC already turns the speaker
+This is of course despite the fact that HDMI-CEC _already_ turns the speaker
 off automatically, when the TV is turned off.
 
-> _"I'm not mad at you, I'm mad at the system" - Dennis_
+> _"I'm not mad at you, **I'm mad at the system**" - Dennis_
 
 Seeing as the EU has made proper speaker integration with your TV _illegal_,
 and I couldn't find a proper library for this on linux, I created this small
@@ -30,17 +30,43 @@ rust script in an afternoon.
 
 ## Features
 
-Generates a stream of zeroes with periodic 0.1-second bursts of a sine
-wave (default: 50Hz, 0.1% amplitude, every 0.1 seconds).  Configurable via
-command-line arguments for pulse rate, signal frequency, amplitude, sample
-rate, and pulse duration. Keeps audio outputs alive, similar to Sound
-Keeper’s Fluctuate mode.
+Generates a configurable sine wive in periods of silence. See the options below:
+
+```
+Usage: rustle [OPTIONS]
+
+Options:
+  -d, --pulse-duration <PULSE_DURATION>
+          Duration of each tone in seconds [default: 120]
+  -f, --frequency <FREQUENCY>
+          Frequency of the sine wave during pulses in Hz [default: 20]
+  -a, --amplitude <AMPLITUDE>
+          Amplitude of the sine wave (e.g., 0.01 for 1%) [default: 0.01]
+  -s, --mins-of-silence <MINS_OF_SILENCE>
+          Minutes of undetected sound until the tone plays [default: 10]
+  -h, --help
+          Print help
+  -V, --version
+          Print version
+```
+
+So, by default if there has been no sound playing for 10 minutes (as measured
+by ALSA), generate a sine wave of 20Hz for 2 minutes, resetting the silence
+period.
 
 ## Installation
 
-TODO
+**Nix (recommended):**
 
-View help for all options:
 ```bash
-  cargo run -- --help
+  nix profile install github:rasmus-kirk/rustle
 ```
+
+**Cargo:**
+
+```bash
+  cargo install rustle
+```
+
+If you install with cargo you might need some alsa dependencies, I suggest
+using Nix, since it will handle the non-rust dependencies for you.

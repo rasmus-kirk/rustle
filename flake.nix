@@ -8,7 +8,6 @@
 
   outputs = { self, nixpkgs, rust-overlay }:
     let
-      rustVersion = "1.87.0";
       rustFmtVersion = "2024-12-01";
 
       # Systems supported
@@ -35,9 +34,9 @@
     {
       overlays.default = final: prev: {
         # The Rust toolchain used for the package build
-        rustToolchain = final.rust-bin.stable."${rustVersion}".default.override {
+        rustToolchain = final.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
           extensions = [ "rust-analyzer" "rust-src" ];
-        };
+        });
       };
 
       devShells = forAllSystems ({ pkgs } : {
@@ -45,7 +44,7 @@
           alsapkgs = with pkgs; [ alsa-lib.dev alsa-lib alsa-plugins ];
         in pkgs.mkShell {
           buildInputs = with pkgs; [
-            pkg-config.
+            pkg-config
             # rustfmt must be kept above rustToolchain in this list!
             rust-bin.nightly."${rustFmtVersion}".rustfmt
             rustToolchain
@@ -68,6 +67,7 @@
               cargo test --all-features
             '')
           ] ++ alsapkgs;
+          RUST_LOG = "debug";
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath alsapkgs;
           ALSA_PLUGIN_DIR = "${pkgs.alsa-plugins}/lib/alsa-lib";
         };
