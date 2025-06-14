@@ -51,10 +51,10 @@ Options:
 ```
 
 So, by default if there has been no sound playing for 10 minutes (as measured
-by ALSA), generate a sine wave of 20Hz for 2 minutes, resetting the silence
+by `pw-dump`), generate a sine wave of 20Hz for 2 minutes, resetting the silence
 period.
 
-## Installation
+## installation
 
 **Nix (recommended):**
 
