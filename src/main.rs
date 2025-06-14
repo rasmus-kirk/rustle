@@ -29,7 +29,7 @@ struct Args {
     minutes_of_silence: u64,
 }
 
-macro_rules! handle_err_cont {
+macro_rules! handle_err {
     ($result:expr) => {
         match $result {
             Ok(value) => value,
@@ -51,6 +51,7 @@ fn is_playing_pipewire() -> anyhow::Result<bool> {
 }
 
 fn play_sound(args: &Args) -> anyhow::Result<()> {
+    debug!("Playing {} Hz sine wave for {} seconds", args.frequency, args.pulse_duration);
     let (_stream, stream_handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&stream_handle)?;
     if args.pulse_duration != 0.0 {
@@ -76,18 +77,18 @@ fn main() {
     loop {
         sleep(Duration::new(1, 0));
 
-        let is_playing = handle_err_cont!(is_playing_pipewire());
-        let secs_of_silence = handle_err_cont!(silence_start.elapsed()).as_secs();
+        let is_playing = handle_err!(is_playing_pipewire());
+        let secs_of_silence = handle_err!(silence_start.elapsed()).as_secs();
         let mins_of_silence = secs_of_silence / 60;
 
         if mins_of_silence >= args.minutes_of_silence {
-            handle_err_cont!(play_sound(&args));
+            handle_err!(play_sound(&args));
             silence_start = SystemTime::now();
         } else if is_playing {
             silence_start = SystemTime::now();
         }
 
-        if handle_err_cont!(program_start.elapsed()).as_secs() % DEBUG_INTERVAL == 0 {
+        if handle_err!(program_start.elapsed()).as_secs() % DEBUG_INTERVAL == 0 {
             if is_playing {
                 debug!("Sound is currently playing")
             } else {
