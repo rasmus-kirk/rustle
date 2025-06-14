@@ -77,9 +77,12 @@ fn main() {
     env_logger::init();
 
     let debug_interval = match std::env::var("DEBUG_INTERVAL") {
-        Ok(val) => val.parse().unwrap_or(DEBUG_INTERVAL_DEFAULT),
+        Ok(val) => val.parse().unwrap_or_else(|e| {
+            error!("{e}");
+            DEBUG_INTERVAL_DEFAULT
+        }),
         Err(e) => {
-            error!("{}", e);
+            error!("{e}");
             DEBUG_INTERVAL_DEFAULT
         }
     };
