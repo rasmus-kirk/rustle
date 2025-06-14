@@ -67,6 +67,7 @@ fn play_sound(args: &Args) -> anyhow::Result<()> {
         sink.append(src);
     };
     sink.sleep_until_end();
+    debug!("Playing of wave stopped");
 
     Ok(())
 }
