@@ -5,7 +5,7 @@ homepage = "https://github.com/rasmus-kirk/rustle"
 repository = "https://github.com/rasmus-kirk/rustle"
 version = "0.2.0"
 edition = "2024"
-license = "GPLv3"
+license = "GPL-3.0"
 
 [dependencies]
 rodio = "0.20"

@@ -1,15 +1,10 @@
-#![feature(iterator_try_collect)]
-
 use clap::Parser;
 use log::{debug, error};
 use rodio::source::SineWave;
 use rodio::{OutputStream, Sink, Source};
-use std::fs::DirEntry;
-use std::path::Path;
 use std::process::Command;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
-use std::{fs, io};
 
 // In seconds
 const DEBUG_INTERVAL: u64 = 60;

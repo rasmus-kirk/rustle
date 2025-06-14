@@ -63,7 +63,6 @@
             rust-bin.nightly."${rustFmtVersion}".rustfmt
             rustToolchain
             (writeShellScriptBin "check-all" ''
-              cd ${self}
               cargo fmt --all -- --check &&
               echo "-------------------- Format ✅ --------------------" &&
               check-lint &&
