@@ -51,7 +51,10 @@ fn is_playing_pipewire() -> anyhow::Result<bool> {
 }
 
 fn play_sound(args: &Args) -> anyhow::Result<()> {
-    debug!("Playing {} Hz sine wave for {} seconds", args.frequency, args.pulse_duration);
+    debug!(
+        "Playing {} Hz sine wave for {} seconds",
+        args.frequency, args.pulse_duration
+    );
     let (_stream, stream_handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&stream_handle)?;
     if args.pulse_duration != 0.0 {
@@ -100,10 +103,4 @@ fn main() {
             }
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_dummy() {}
 }

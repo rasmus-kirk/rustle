@@ -70,3 +70,9 @@ period.
 
 If you install with cargo you might need some alsa dependencies, I suggest
 using Nix, since it will handle the non-rust dependencies for you.
+
+## Systemd Service in Nix
+
+I personally run this as a systemd service
+using Nix Home Manager. The service can be seen
+[here](https://github.com/rasmus-kirk/nix-config/blob/main/modules/home-manager/rustle/default.nix)
