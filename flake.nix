@@ -48,6 +48,7 @@
             pipewire
             pipewire.dev
             pipewire.jack
+            pulseaudio
           ];
           combinedAlsaPlugins = pkgs.symlinkJoin {
             name = "combined-alsa-plugins";
