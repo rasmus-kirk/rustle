@@ -105,7 +105,7 @@
               lockFile = ./Cargo.lock;
             };
             nativeBuildInputs = with pkgs; [ pkgconf ];
-            buildInputs = with pkgs; [ alsa-lib ];
+            buildInputs = with pkgs; [ alsa-lib pulseaudio ];
           };
         rustleWrapped = let combinedAlsaPlugins = pkgs.symlinkJoin {
           name = "combined-alsa-plugins";

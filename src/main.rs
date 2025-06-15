@@ -1,6 +1,6 @@
 #![feature(mpmc_channel)]
 
-use anyhow::{Result, bail, ensure, Context};
+use anyhow::{Context, Result, bail, ensure};
 use clap::Parser;
 use libpulse_binding::mainloop::standard::IterateResult;
 use libpulse_binding::sample::{Format, Spec};
@@ -8,7 +8,7 @@ use libpulse_simple_binding::Simple;
 use log::{debug, error, info};
 use rodio::source::SineWave;
 use rodio::{OutputStream, Sink, Source};
-use std::thread::{sleep};
+use std::thread::sleep;
 use std::time::{Duration, SystemTime};
 
 use libpulse_binding::context::Context as LibpulseContext;
@@ -80,7 +80,7 @@ fn get_default_sink() -> anyhow::Result<String> {
     loop {
         match mainloop.borrow_mut().iterate(true) {
             IterateResult::Success(_) => (),
-            IterateResult::Err(e) => panic!("Mainloop iteration failed: {}", e),
+            IterateResult::Err(e) => panic!("Mainloop iteration failed: {e}"),
             IterateResult::Quit(_) => panic!("Mainloop quit unexpectedly"),
         }
 
@@ -105,9 +105,7 @@ fn get_default_sink() -> anyhow::Result<String> {
         .get_server_info(move |server_info| {
             if let Some(default_sink) = &server_info.default_sink_name {
                 *default_sink_received_clone.borrow_mut() = Some(default_sink.to_string());
-                println!("Default Output Sink: {}", default_sink);
-            } else {
-                info!("No default output sink found");
+                info!("Default Output Sink: {default_sink}");
             }
             *server_info_received_clone.borrow_mut() = true;
         });
@@ -116,7 +114,7 @@ fn get_default_sink() -> anyhow::Result<String> {
     while !*server_info_received.borrow() {
         match mainloop.borrow_mut().iterate(true) {
             IterateResult::Success(_) => (),
-            IterateResult::Err(e) => bail!("Mainloop iteration failed: {}", e),
+            IterateResult::Err(e) => bail!("Mainloop iteration failed: {e}"),
             IterateResult::Quit(_) => bail!("Mainloop quit unexpectedly"),
         }
     }
@@ -187,10 +185,13 @@ fn main() -> Result<()> {
     let mut silence_start = SystemTime::now();
     let program_start = SystemTime::now();
     loop {
-        sleep(Duration::new(args.check_interval, 0));
+        sleep(Duration::from_secs(args.check_interval));
 
-        s.read(&mut buf)?;
-        let sum_squares: f32 = buf.iter().map(|b| ((*b as f32 - 128.0) / 128.0).powi(2)).sum();
+        handle_err!(s.read(&mut buf));
+        let sum_squares: f32 = buf
+            .iter()
+            .map(|b| ((*b as f32 - 128.0) / 128.0).powi(2))
+            .sum();
         let rms = (sum_squares / buf.len() as f32).sqrt();
         let is_playing = rms >= args.threshold;
         let secs_of_silence = handle_err!(silence_start.elapsed()).as_secs();
@@ -205,10 +206,10 @@ fn main() -> Result<()> {
 
         if handle_err!(program_start.elapsed()).as_secs() % debug_interval == 0 {
             if is_playing {
-                debug!("Sound is currently playing at {rms} vol")
+                debug!("Sound is currently playing ({rms} vol)")
             } else {
                 debug!(
-                    "Period of silence: {:02}:{:02}",
+                    "Period of silence: {:02}:{:02} ({rms} vol)",
                     mins_of_silence,
                     secs_of_silence % 60
                 )
