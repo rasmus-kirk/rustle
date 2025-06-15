@@ -28,31 +28,44 @@ Seeing as the EU has made proper speaker integration with your TV _illegal_,
 and I couldn't find a proper library for this on linux, I created this small
 rust script in an afternoon.
 
+> **Note:** Requires Pulseaudio and Alsa, but this should be standard on most Linux distros
+
 ## Features
 
 Generates a configurable sine wive in periods of silence. See the options below:
 
 ```
-Usage: rustle [OPTIONS]
-
-Options:
-  -d, --pulse-duration <PULSE_DURATION>
-          Duration of each tone in seconds [default: 120]
-  -f, --frequency <FREQUENCY>
-          Frequency of the sine wave during pulses in Hz [default: 20]
-  -a, --amplitude <AMPLITUDE>
-          Amplitude of the sine wave (e.g., 0.01 for 1%) [default: 0.01]
-  -s, --mins-of-silence <MINS_OF_SILENCE>
-          Minutes of undetected sound until the tone plays [default: 10]
-  -h, --help
-          Print help
-  -V, --version
-          Print version
+  Usage: rustle [OPTIONS]
+  
+  Options:
+    -d, --pulse-duration <PULSE_DURATION>
+            Duration of each tone in seconds (0 for continual playback) [default: 120]
+    -f, --frequency <FREQUENCY>
+            Frequency of the sine wave during pulses in Hz [default: 20]
+    -a, --amplitude <AMPLITUDE>
+            Amplitude of the sine wave (e.g., 0.01 for 1%) [default: 0.01]
+    -s, --minutes-of-silence <MINUTES_OF_SILENCE>
+            Minutes of undetected sound until the tone plays [default: 10]
+    -t, --threshold <THRESHOLD>
+            Threshold sound level that counts as "undetected sound" [default: 0.001]
+    -i, --check-interval <CHECK_INTERVAL>
+            How often to check for sound in seconds [default: 1]
+    -h, --help
+            Print help
+    -V, --version
+            Print version
 ```
 
-So, by default if there has been no sound playing for 10 minutes (as measured
-by `pw-dump`), generate a sine wave of 20Hz for 2 minutes, resetting the silence
-period.
+So, by default if there has been no sound playing for 10 minutes, generate
+a sine wave of 20Hz for 2 minutes, resetting the silence period. Depending
+on the model of your speakers, you may have to test these options. To enable
+debugging set the following environment variables:
+
+```bash
+  export RUST_LOG=debug # Enable debugging
+  export DEBUG_INTERVAL=10 # Interval of debug messages, in seconds
+  rustle
+```
 
 ## installation
 
@@ -68,11 +81,10 @@ period.
   cargo install rustle
 ```
 
-If you install with cargo you might need some alsa dependencies, I suggest
-using Nix, since it will handle the non-rust dependencies for you.
+If you install with cargo you might need some alsa/pulseaudio dependencies,
+I suggest using Nix, since it will handle the non-rust dependencies for you.
 
 ## Systemd Service in Nix
 
-I personally run this as a systemd service
-using Nix Home Manager. The service can be seen
-[here](https://github.com/rasmus-kirk/nix-config/blob/main/modules/home-manager/rustle/default.nix)
+I personally run this as a systemd service using Nix Home Manager. The
+service can be seen [here](https://github.com/rasmus-kirk/nix-config/blob/main/modules/home-manager/rustle/default.nix)
