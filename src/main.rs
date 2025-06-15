@@ -2,19 +2,18 @@
 
 use anyhow::{Context, Result, bail, ensure};
 use clap::Parser;
+use libpulse_binding::context::Context as LibpulseContext;
 use libpulse_binding::mainloop::standard::IterateResult;
 use libpulse_binding::sample::{Format, Spec};
+use libpulse_binding::{context::State, mainloop::standard::Mainloop};
 use libpulse_simple_binding::Simple;
 use log::{debug, error, info};
 use rodio::source::SineWave;
 use rodio::{OutputStream, Sink, Source};
-use std::thread::sleep;
-use std::time::{Duration, SystemTime};
-
-use libpulse_binding::context::Context as LibpulseContext;
-use libpulse_binding::{context::State, mainloop::standard::Mainloop};
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::thread::sleep;
+use std::time::{Duration, SystemTime};
 
 // In seconds
 const DEBUG_INTERVAL_DEFAULT: u64 = 60;
@@ -60,12 +59,10 @@ macro_rules! handle_err {
 }
 
 fn get_default_sink() -> anyhow::Result<String> {
-    // Create a new mainloop
     let mainloop = Rc::new(RefCell::new(
         Mainloop::new().expect("Failed to create mainloop"),
     ));
 
-    // Create a new context
     let context = Rc::new(RefCell::new(
         LibpulseContext::new(&*mainloop.borrow(), "PulseContext")
             .with_context(|| "Failed to create context")?,
@@ -80,25 +77,22 @@ fn get_default_sink() -> anyhow::Result<String> {
     loop {
         match mainloop.borrow_mut().iterate(true) {
             IterateResult::Success(_) => (),
-            IterateResult::Err(e) => panic!("Mainloop iteration failed: {e}"),
-            IterateResult::Quit(_) => panic!("Mainloop quit unexpectedly"),
+            IterateResult::Err(e) => bail!("Mainloop iteration failed: {e}"),
+            IterateResult::Quit(_) => bail!("Mainloop quit unexpectedly"),
         }
 
         match context.borrow().get_state() {
             State::Ready => break,
-            State::Failed | State::Terminated => panic!("Context connection failed"),
+            State::Failed | State::Terminated => bail!("Context connection failed"),
             _ => continue,
         }
     }
 
-    // Flag to track when server info is retrieved
     let server_info_received = Rc::new(RefCell::new(false));
     let server_info_received_clone = server_info_received.clone();
-
     let default_sink_received = Rc::new(RefCell::new(None));
     let default_sink_received_clone = default_sink_received.clone();
 
-    // Get server information (includes default sink)
     context
         .borrow_mut()
         .introspect()
@@ -110,7 +104,6 @@ fn get_default_sink() -> anyhow::Result<String> {
             *server_info_received_clone.borrow_mut() = true;
         });
 
-    // Wait until server info is received
     while !*server_info_received.borrow() {
         match mainloop.borrow_mut().iterate(true) {
             IterateResult::Success(_) => (),
@@ -119,7 +112,6 @@ fn get_default_sink() -> anyhow::Result<String> {
         }
     }
 
-    // Clean up
     context.borrow_mut().disconnect();
 
     default_sink_received
