@@ -23,7 +23,7 @@ const DEBUG_INTERVAL_DEFAULT: u64 = 60;
 #[command(author="Rasmus Kirk", version, about = "Rustle - Keep your digital speakers from sleeping, using low sound signals", long_about = None)]
 struct Args {
     /// Duration of each tone in seconds (0 for continual playback)
-    #[arg(short = 'd', long, default_value_t = 120.0)]
+    #[arg(short = 'd', long, default_value_t = 10.0)]
     pulse_duration: f32,
 
     /// Frequency of the sine wave during pulses in Hz

@@ -39,7 +39,7 @@ Generates a configurable sine wive in periods of silence. See the options below:
   
   Options:
     -d, --pulse-duration <PULSE_DURATION>
-            Duration of each tone in seconds (0 for continual playback) [default: 120]
+            Duration of each tone in seconds (0 for continual playback) [default: 10]
     -f, --frequency <FREQUENCY>
             Frequency of the sine wave during pulses in Hz [default: 20]
     -a, --amplitude <AMPLITUDE>
@@ -57,9 +57,9 @@ Generates a configurable sine wive in periods of silence. See the options below:
 ```
 
 So, by default if there has been no sound playing for 10 minutes, generate
-a sine wave of 20Hz for 2 minutes, resetting the silence period. Depending
-on the model of your speakers, you may have to test these options. To enable
-debugging set the following environment variables:
+a sine wave of 20Hz for 10 seconds, resetting the silence period. Depending
+on the model of your speakers, you may have to tweak these options, but they
+work for mine. To enable debugging set the following environment variables:
 
 ```bash
   export RUST_LOG=debug # Enable debugging
