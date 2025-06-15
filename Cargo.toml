@@ -3,7 +3,7 @@ name = "rustle"
 description = "Keep your digital speakers from sleeping, using low sound signals"
 homepage = "https://github.com/rasmus-kirk/rustle"
 repository = "https://github.com/rasmus-kirk/rustle"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 license = "GPL-3.0"
 
