@@ -11,9 +11,11 @@ use log::{debug, error, info};
 use rodio::source::SineWave;
 use rodio::{OutputStream, Sink, Source};
 use std::cell::RefCell;
+use std::process::Command;
 use std::rc::Rc;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
+use sysinfo::System;
 
 // In seconds
 const DEBUG_INTERVAL_DEFAULT: u64 = 60;
@@ -36,6 +38,16 @@ struct Args {
     /// Minutes of undetected sound until the tone plays
     #[arg(short = 's', long, default_value_t = 10)]
     minutes_of_silence: u64,
+
+    /// Minutes of undetected sound until suspend, set to zero to disable this feature.
+    /// This requires `systemctl suspend` to be accesible by the user running rustle.
+    #[arg(long, default_value_t = 0)]
+    minutes_until_suspend: u64,
+
+    /// Maximum average allowed cpu usage allowed when checking for suspend.
+    /// 0 to disable.
+    #[arg(long, default_value_t = 0.0)]
+    suspend_cpu: f32,
 
     /// Threshold sound level that counts as "undetected sound"
     #[arg(short = 't', long, default_value_t = 0.001)]
@@ -154,6 +166,8 @@ fn main() -> Result<()> {
         }
     };
 
+    let mut sys = System::new_all();
+
     let spec = Spec {
         format: Format::U8,
         channels: 1,
@@ -161,25 +175,43 @@ fn main() -> Result<()> {
     };
     ensure!(spec.is_valid());
 
-    let device = format!("{}.monitor", get_default_sink()?);
-    let s = Simple::new(
-        None,
-        "rustle",
-        libpulse_binding::stream::Direction::Record,
-        Some(&device),
-        "record",
-        &spec,
-        None,
-        None,
-    )?;
+    let new_pulse_binding = || -> Result<Simple> {
+        let device = format!("{}.monitor", get_default_sink()?);
+        let simple = Simple::new(
+            None,
+            "rustle",
+            libpulse_binding::stream::Direction::Record,
+            Some(&device),
+            "record",
+            &spec,
+            None,
+            None,
+        )?;
+        Ok(simple)
+    };
+    let mut pulse_binding = new_pulse_binding()?;
 
+    let mut cpu_usage_log = vec![];
     let mut buf = vec![0u8; spec.rate as usize * spec.channels as usize];
     let mut silence_start = SystemTime::now();
+    let mut system_silence_start = SystemTime::now();
     let program_start = SystemTime::now();
     loop {
         sleep(Duration::from_secs(args.check_interval));
+        sys.refresh_cpu_all();
+        let cpu_max_core_usage = sys
+            .cpus()
+            .iter()
+            .map(|x| x.cpu_usage())
+            .fold(f32::NEG_INFINITY, f32::max);
+        if cpu_usage_log.len() >= args.minutes_until_suspend as usize {
+            let _ = cpu_usage_log.pop();
+        }
+        cpu_usage_log.insert(0, cpu_max_core_usage);
+        let cpu_usage_average =
+            cpu_usage_log.iter().sum::<f32>() / args.minutes_until_suspend as f32;
 
-        handle_err!(s.read(&mut buf));
+        handle_err!(pulse_binding.read(&mut buf));
         let sum_squares: f32 = buf
             .iter()
             .map(|b| ((*b as f32 - 128.0) / 128.0).powi(2))
@@ -191,20 +223,37 @@ fn main() -> Result<()> {
 
         if mins_of_silence >= args.minutes_of_silence {
             handle_err!(play_sound(&args));
+            pulse_binding = new_pulse_binding()?;
+            sleep(Duration::from_secs(args.check_interval));
             silence_start = SystemTime::now();
         } else if is_playing {
             silence_start = SystemTime::now();
         }
 
+        let mins_of_system_silence = system_silence_start.elapsed()?.as_secs() / 60;
+        if mins_of_system_silence >= args.minutes_until_suspend
+            && args.minutes_until_suspend != 0
+            && (cpu_usage_average >= args.suspend_cpu || args.suspend_cpu == 0.0)
+        {
+            system_silence_start = SystemTime::now();
+            let status = Command::new("systemctl").arg("suspend").status()?;
+            if !status.success() {
+                error!("Failed to suspend. Exit code: {:?}", status.code());
+            }
+        }
+
         if handle_err!(program_start.elapsed()).as_secs() % debug_interval == 0 {
             if is_playing {
-                debug!("Sound is currently playing ({rms} vol)")
+                system_silence_start = SystemTime::now();
+                debug!(
+                    "Sound is currently playing ({rms} vol) (cpu: {cpu_usage_average:.02}) (suspend-timer: {mins_of_system_silence})"
+                );
             } else {
                 debug!(
-                    "Period of silence: {:02}:{:02} ({rms} vol)",
+                    "Period of silence: {:02}:{:02} ({rms} vol) (cpu: {cpu_usage_average:.02}) (suspend-timer: {mins_of_system_silence})",
                     mins_of_silence,
                     secs_of_silence % 60
-                )
+                );
             }
         }
     }
