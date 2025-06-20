@@ -154,6 +154,20 @@ fn play_sound(args: &Args) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn get_average_max_cpu(sys: &mut System, cpu_usage_log: &mut Vec<f32>, args: &Args) -> f32 {
+    sys.refresh_cpu_all();
+    let cpu_max_core_usage = sys
+        .cpus()
+        .iter()
+        .map(|x| x.cpu_usage())
+        .fold(f32::NEG_INFINITY, f32::max);
+    if cpu_usage_log.len() >= args.minutes_until_suspend as usize {
+        let _ = cpu_usage_log.pop();
+    }
+    cpu_usage_log.insert(0, cpu_max_core_usage);
+    cpu_usage_log.iter().sum::<f32>() / args.minutes_until_suspend as f32
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
     env_logger::init();
@@ -193,23 +207,18 @@ fn main() -> Result<()> {
 
     let mut cpu_usage_log = vec![];
     let mut buf = vec![0u8; spec.rate as usize * spec.channels as usize];
-    let mut silence_start = SystemTime::now();
-    let mut system_silence_start = SystemTime::now();
+    let mut secs_of_silence = 0;
+    let mut secs_of_system_silence = 0;
     let program_start = SystemTime::now();
     loop {
         sleep(Duration::from_secs(args.check_interval));
-        sys.refresh_cpu_all();
-        let cpu_max_core_usage = sys
-            .cpus()
-            .iter()
-            .map(|x| x.cpu_usage())
-            .fold(f32::NEG_INFINITY, f32::max);
-        if cpu_usage_log.len() >= args.minutes_until_suspend as usize {
-            let _ = cpu_usage_log.pop();
-        }
-        cpu_usage_log.insert(0, cpu_max_core_usage);
-        let cpu_usage_average =
-            cpu_usage_log.iter().sum::<f32>() / args.minutes_until_suspend as f32;
+        secs_of_silence += args.check_interval;
+        secs_of_system_silence += args.check_interval;
+
+        let mins_of_silence = secs_of_silence / 60;
+        let mins_of_system_silence = secs_of_system_silence / 60;
+
+        let cpu_usage_average = get_average_max_cpu(&mut sys, &mut cpu_usage_log, &args);
 
         handle_err!(pulse_binding.read(&mut buf));
         let sum_squares: f32 = buf
@@ -218,24 +227,21 @@ fn main() -> Result<()> {
             .sum();
         let rms = (sum_squares / buf.len() as f32).sqrt();
         let is_playing = rms >= args.threshold;
-        let secs_of_silence = handle_err!(silence_start.elapsed()).as_secs();
-        let mins_of_silence = secs_of_silence / 60;
 
         if mins_of_silence >= args.minutes_of_silence {
             handle_err!(play_sound(&args));
             pulse_binding = new_pulse_binding()?;
             sleep(Duration::from_secs(args.check_interval));
-            silence_start = SystemTime::now();
+            secs_of_silence = 0;
         } else if is_playing {
-            silence_start = SystemTime::now();
+            secs_of_silence = 0;
         }
 
-        let mins_of_system_silence = system_silence_start.elapsed()?.as_secs() / 60;
         if mins_of_system_silence >= args.minutes_until_suspend
             && args.minutes_until_suspend != 0
             && (cpu_usage_average >= args.suspend_cpu || args.suspend_cpu == 0.0)
         {
-            system_silence_start = SystemTime::now();
+            secs_of_system_silence = 0;
             let status = Command::new("systemctl").arg("suspend").status()?;
             if !status.success() {
                 error!("Failed to suspend. Exit code: {:?}", status.code());
@@ -244,7 +250,7 @@ fn main() -> Result<()> {
 
         if handle_err!(program_start.elapsed()).as_secs() % debug_interval == 0 {
             if is_playing {
-                system_silence_start = SystemTime::now();
+                secs_of_system_silence = 0;
                 debug!(
                     "Sound is currently playing ({rms} vol) (cpu: {cpu_usage_average:.02}) (suspend-timer: {mins_of_system_silence})"
                 );
